@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -47,6 +46,30 @@
         .pink { background-color: rgba(255, 105, 180, 0.5); } /* Pink */
         .blue { background-color: rgba(100, 149, 237, 0.5); } /* Blue */
         .both { background: linear-gradient(45deg, rgba(255, 105, 180, 0.5), rgba(100, 149, 237, 0.5)); } /* Both Colors */
+        
+        .share-button {
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .share-button:hover {
+            background-color: #45a049;
+        }
+        
+        .share-url {
+            margin: 15px auto;
+            padding: 10px;
+            width: 80%;
+            max-width: 600px;
+            display: none;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -54,7 +77,13 @@
     <h1>Интерактивное Бинго</h1>
     <p>Нажмите на ячейки, чтобы выделить их цветом.</p>
     
+    <button id="shareButton" class="share-button">Поделиться результатом</button>
+    <input type="text" id="shareUrl" class="share-url" readonly>
+    
     <div class="bingo-container" id="bingoContainer"></div>
+
+    <button id="shareButtonBottom" class="share-button" style="margin-top: 30px;">Поделиться результатом</button>
+    <input type="text" id="shareUrlBottom" class="share-url" readonly>
 
     <script>
         const imageCount = 6; // Number of images (1.jpg to 6.jpg)
@@ -69,7 +98,36 @@
             { x: 9.8, y: 74.5 }, { x: 31, y: 74.5 }, { x: 52, y: 74.5 }, { x: 73, y: 74.5 }  
         ]; // Adjust based on block positions
 
+        // Проверяем, есть ли данные в URL
+        function loadFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const bingoData = urlParams.get('data');
+            
+            if (bingoData) {
+                try {
+                    const decodedData = JSON.parse(atob(bingoData));
+                    
+                    // Очищаем localStorage перед загрузкой новых данных
+                    for (let i = 1; i <= imageCount; i++) {
+                        for (let j = 0; j < positions.length; j++) {
+                            localStorage.removeItem(`bingo-${i}-${j}`);
+                        }
+                    }
+                    
+                    // Загружаем данные из URL в localStorage
+                    Object.keys(decodedData).forEach(key => {
+                        localStorage.setItem(key, decodedData[key]);
+                    });
+                } catch (e) {
+                    console.error("Ошибка при разборе данных URL:", e);
+                }
+            }
+        }
+
         function loadImages() {
+            // Сначала загружаем данные из URL, если они есть
+            loadFromUrl();
+            
             for (let i = 1; i <= imageCount; i++) {
                 const wrapper = document.createElement("div");
                 wrapper.classList.add("bingo-wrapper");
@@ -124,6 +182,55 @@
 				localStorage.setItem(key, "pink");
 			}
 		}
+        
+        // Функция для создания URL для обмена
+        function generateShareableUrl() {
+            const bingoData = {};
+            
+            // Собираем все данные из localStorage, относящиеся к бинго
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('bingo-')) {
+                    bingoData[key] = localStorage.getItem(key);
+                }
+            }
+            
+            // Кодируем данные для URL
+            const encodedData = btoa(JSON.stringify(bingoData));
+            
+            // Создаем URL с параметром data
+            const url = `${window.location.origin}${window.location.pathname}?data=${encodedData}`;
+            
+            return url;
+        }
+        
+        // Настраиваем кнопку "Поделиться" вверху страницы
+        document.getElementById('shareButton').addEventListener('click', function() {
+            shareResult('shareUrl');
+        });
+        
+        // Настраиваем кнопку "Поделиться" внизу страницы
+        document.getElementById('shareButtonBottom').addEventListener('click', function() {
+            shareResult('shareUrlBottom');
+        });
+        
+        // Общая функция для обработки нажатия на кнопку "Поделиться"
+        function shareResult(targetInputId) {
+            const shareUrl = document.getElementById(targetInputId);
+            const url = generateShareableUrl();
+            
+            shareUrl.value = url;
+            shareUrl.style.display = 'block';
+            shareUrl.select();
+            
+            try {
+                // Пытаемся скопировать URL в буфер обмена
+                document.execCommand('copy');
+                alert('Ссылка скопирована в буфер обмена!');
+            } catch (err) {
+                console.error('Не удалось скопировать: ', err);
+            }
+        }
 
         loadImages();
     </script>
