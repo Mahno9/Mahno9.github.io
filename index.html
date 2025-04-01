@@ -70,6 +70,33 @@
             display: none;
             font-size: 14px;
         }
+        
+        .compare-section {
+            margin: 20px auto;
+            padding: 15px;
+            max-width: 600px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+        }
+        
+        .compare-input {
+            width: 80%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .match-indicator {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 20px;
+            color: red;
+            text-shadow: 1px 1px 2px white;
+        }
+        
+        .match-highlight {
+            box-shadow: 0 0 8px 2px gold;
+        }
     </style>
 </head>
 <body>
@@ -79,6 +106,13 @@
     
     <button id="shareButton" class="share-button">Поделиться результатом</button>
     <input type="text" id="shareUrl" class="share-url" readonly>
+    
+    <div class="compare-section">
+        <h3>Сравнить с другим результатом</h3>
+        <input type="text" id="compareUrl" class="compare-input" placeholder="Вставьте URL для сравнения">
+        <button id="compareButton" class="share-button">Сравнить</button>
+        <button id="resetMatchesButton" class="share-button" style="background-color: #ff5252; margin-left: 10px;">Сбросить совпадения</button>
+    </div>
     
     <div class="bingo-container" id="bingoContainer"></div>
 
@@ -97,6 +131,9 @@
 
             { x: 9.8, y: 74.5 }, { x: 31, y: 74.5 }, { x: 52, y: 74.5 }, { x: 73, y: 74.5 }  
         ]; // Adjust based on block positions
+        
+        // Хранилище для данных другого пользователя
+        let otherUserData = null;
 
         // Проверяем, есть ли данные в URL
         function loadFromUrl() {
@@ -144,6 +181,7 @@
                     block.classList.add("block");
                     block.style.left = `${pos.x}%`;
                     block.style.top = `${pos.y}%`;
+                    block.dataset.bingoKey = `bingo-${i}-${index}`;
 
                     // Restore selection from localStorage
                     const key = `bingo-${i}-${index}`;
@@ -159,6 +197,19 @@
                 wrapper.appendChild(overlay);
                 container.appendChild(wrapper);
             }
+            
+            // Добавляем обработчик для сброса отдельных совпадений
+            document.querySelectorAll('.block').forEach(block => {
+                block.addEventListener('click', function(e) {
+                    // Если есть индикатор совпадения, удаляем его
+                    const indicator = this.querySelector('.match-indicator');
+                    if (indicator) {
+                        indicator.remove();
+                        this.classList.remove('match-highlight');
+                        e.stopPropagation(); // Останавливаем всплытие, чтобы не сработал toggleColor
+                    }
+                });
+            });
         }
 
 		function toggleColor(block, key) {
@@ -181,6 +232,11 @@
 				block.classList.add("pink");
 				localStorage.setItem(key, "pink");
 			}
+            
+            // Если у нас есть данные другого пользователя, обновляем совпадения
+            if (otherUserData) {
+                compareWithOtherData();
+            }
 		}
         
         // Функция для создания URL для обмена
@@ -204,6 +260,56 @@
             return url;
         }
         
+        // Функция для извлечения данных из URL
+        function extractDataFromUrl(url) {
+            try {
+                const urlObj = new URL(url);
+                const bingoData = urlObj.searchParams.get('data');
+                
+                if (bingoData) {
+                    return JSON.parse(atob(bingoData));
+                }
+            } catch (e) {
+                console.error("Ошибка при извлечении данных из URL:", e);
+                alert("Неверный формат URL для сравнения");
+            }
+            return null;
+        }
+        
+        // Функция для сравнения данных текущего пользователя с данными другого пользователя
+        function compareWithOtherData() {
+            // Очищаем все предыдущие индикаторы совпадений
+            document.querySelectorAll('.match-indicator').forEach(el => el.remove());
+            document.querySelectorAll('.match-highlight').forEach(el => el.classList.remove('match-highlight'));
+            
+            if (!otherUserData) return;
+            
+            // Перебираем все блоки
+            document.querySelectorAll('.block').forEach(block => {
+                const key = block.dataset.bingoKey;
+                const myState = localStorage.getItem(key);
+                const otherState = otherUserData[key];
+                
+                // Проверяем совпадения
+                if (myState && otherState) {
+                    const isMatch = 
+                        (myState === 'blue' || myState === 'both') && (otherState === 'pink' || otherState === 'both') ||
+                        (myState === 'pink' || myState === 'both') && (otherState === 'blue' || otherState === 'both');
+                    
+                    if (isMatch) {
+                        // Добавляем индикатор совпадения (сердечко)
+                        const heart = document.createElement('div');
+                        heart.classList.add('match-indicator');
+                        // heart.innerHTML = '❤️';
+                        block.appendChild(heart);
+                        
+                        // Добавляем подсветку
+                        block.classList.add('match-highlight');
+                    }
+                }
+            });
+        }
+        
         // Настраиваем кнопку "Поделиться" вверху страницы
         document.getElementById('shareButton').addEventListener('click', function() {
             shareResult('shareUrl');
@@ -212,6 +318,30 @@
         // Настраиваем кнопку "Поделиться" внизу страницы
         document.getElementById('shareButtonBottom').addEventListener('click', function() {
             shareResult('shareUrlBottom');
+        });
+        
+        // Обработчик для кнопки сравнения
+        document.getElementById('compareButton').addEventListener('click', function() {
+            const compareUrl = document.getElementById('compareUrl').value;
+            
+            if (!compareUrl) {
+                alert('Пожалуйста, введите URL для сравнения');
+                return;
+            }
+            
+            // Извлекаем данные из URL
+            otherUserData = extractDataFromUrl(compareUrl);
+            
+            if (otherUserData) {
+                compareWithOtherData();
+            }
+        });
+        
+        // Обработчик для кнопки сброса совпадений
+        document.getElementById('resetMatchesButton').addEventListener('click', function() {
+            // Очищаем все индикаторы совпадений
+            document.querySelectorAll('.match-indicator').forEach(el => el.remove());
+            document.querySelectorAll('.match-highlight').forEach(el => el.classList.remove('match-highlight'));
         });
         
         // Общая функция для обработки нажатия на кнопку "Поделиться"
