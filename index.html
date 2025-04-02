@@ -113,6 +113,9 @@
     <p>Нажмите на ячейки, чтобы выделить их цветом.</p>
     
     <button id="shareButton" class="share-button">Поделиться результатом</button>
+    <button id="resetAllButton" class="share-button" style="background-color: #ff5252; margin-left: 10px; display: inline-flex; align-items: center; justify-content: center;">
+        <span style="margin-right: 5px;">️🗑️</span> Сбросить текущие данные
+    </button>
     <input type="text" id="shareUrl" class="share-url" readonly>
     
     <div class="compare-section">
@@ -368,6 +371,36 @@
             document.querySelectorAll('.match-highlight, .match-highlight-pink, .match-highlight-blue').forEach(el => {
                 el.classList.remove('match-highlight', 'match-highlight-pink', 'match-highlight-blue');
             });
+        });
+        
+        // Обработчик для кнопки сброса всех данных
+        document.getElementById('resetAllButton').addEventListener('click', function() {
+            if (confirm('Вы уверены, что хотите сбросить все данные? Это действие нельзя отменить!')) {
+                // Очищаем все данные бинго из localStorage
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('bingo-')) {
+                        localStorage.removeItem(key);
+                    }
+                }
+                
+                // Сбрасываем визуальное отображение
+                document.querySelectorAll('.block').forEach(block => {
+                    block.classList.remove('pink', 'blue', 'both');
+                });
+                
+                // Сбрасываем индикаторы совпадений
+                document.querySelectorAll('.match-indicator').forEach(el => el.remove());
+                document.querySelectorAll('.match-highlight, .match-highlight-pink, .match-highlight-blue').forEach(el => {
+                    el.classList.remove('match-highlight', 'match-highlight-pink', 'match-highlight-blue');
+                });
+                
+                // Скрываем поля с URL
+                document.getElementById('shareUrl').style.display = 'none';
+                document.getElementById('shareUrlBottom').style.display = 'none';
+                
+                alert('Все данные успешно сброшены!');
+            }
         });
         
         // Общая функция для обработки нажатия на кнопку "Поделиться"
