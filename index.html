@@ -97,6 +97,14 @@
         .match-highlight {
             box-shadow: 0 0 8px 2px gold;
         }
+        
+        .match-highlight-pink {
+            box-shadow: 0 0 8px 2px hotpink;
+        }
+        
+        .match-highlight-blue {
+            box-shadow: 0 0 8px 2px cornflowerblue;
+        }
     </style>
 </head>
 <body>
@@ -205,7 +213,7 @@
                     const indicator = this.querySelector('.match-indicator');
                     if (indicator) {
                         indicator.remove();
-                        this.classList.remove('match-highlight');
+                        this.classList.remove('match-highlight', 'match-highlight-pink', 'match-highlight-blue');
                         e.stopPropagation(); // Останавливаем всплытие, чтобы не сработал toggleColor
                     }
                 });
@@ -280,7 +288,9 @@
         function compareWithOtherData() {
             // Очищаем все предыдущие индикаторы совпадений
             document.querySelectorAll('.match-indicator').forEach(el => el.remove());
-            document.querySelectorAll('.match-highlight').forEach(el => el.classList.remove('match-highlight'));
+            document.querySelectorAll('.match-highlight, .match-highlight-pink, .match-highlight-blue').forEach(el => {
+                el.classList.remove('match-highlight', 'match-highlight-pink', 'match-highlight-blue');
+            });
             
             if (!otherUserData) return;
             
@@ -292,19 +302,33 @@
                 
                 // Проверяем совпадения
                 if (myState && otherState) {
-                    const isMatch = 
-                        (myState === 'blue' || myState === 'both') && (otherState === 'pink' || otherState === 'both') ||
-                        (myState === 'pink' || myState === 'both') && (otherState === 'blue' || otherState === 'both');
+                    let matchType = null;
                     
-                    if (isMatch) {
-                        // Добавляем индикатор совпадения (сердечко)
+                    // Мой розовый совпадает с чужим синим или обоими
+                    if ((myState === 'pink' || myState === 'both') && (otherState === 'blue' || otherState === 'both')) {
+                        matchType = 'pink';
+                    }
+                    
+                    // Мой синий совпадает с чужим розовым или обоими
+                    if ((myState === 'blue' || myState === 'both') && (otherState === 'pink' || otherState === 'both')) {
+                        matchType = matchType === 'pink' ? 'both' : 'blue';
+                    }
+                    
+                    if (matchType) {
+                        // Добавляем индикатор совпадения
                         const heart = document.createElement('div');
                         heart.classList.add('match-indicator');
                         // heart.innerHTML = '❤️';
                         block.appendChild(heart);
                         
-                        // Добавляем подсветку
-                        block.classList.add('match-highlight');
+                        // Добавляем подсветку с нужным цветом
+                        if (matchType === 'pink') {
+                            block.classList.add('match-highlight-pink');
+                        } else if (matchType === 'blue') {
+                            block.classList.add('match-highlight-blue');
+                        } else if (matchType === 'both') {
+                            block.classList.add('match-highlight');
+                        }
                     }
                 }
             });
@@ -341,7 +365,9 @@
         document.getElementById('resetMatchesButton').addEventListener('click', function() {
             // Очищаем все индикаторы совпадений
             document.querySelectorAll('.match-indicator').forEach(el => el.remove());
-            document.querySelectorAll('.match-highlight').forEach(el => el.classList.remove('match-highlight'));
+            document.querySelectorAll('.match-highlight, .match-highlight-pink, .match-highlight-blue').forEach(el => {
+                el.classList.remove('match-highlight', 'match-highlight-pink', 'match-highlight-blue');
+            });
         });
         
         // Общая функция для обработки нажатия на кнопку "Поделиться"
